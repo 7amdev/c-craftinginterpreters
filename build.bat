@@ -3,5 +3,5 @@
 rmdir /S /Q build
 mkdir build
 pushd build
-cl /Zi ../src/main.cpp
+cl /Fe:clox.exe /Zi ../src/*.cpp 
 popd

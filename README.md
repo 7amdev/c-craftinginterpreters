@@ -7,6 +7,6 @@ clox is a scripting language built in C language.
 To compile and run the code, execute the command bellow:
 
 ```sh
-build.bat
-build\main
+build
+build\clox
 ```
