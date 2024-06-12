@@ -7,10 +7,17 @@
 typedef enum
 {
     OP_CONSTANT,
+    OP_NIL,
+    OP_TRUE,
+    OP_FALSE,
+    OP_EQUAL,
+    OP_GREATER,
+    OP_LESS,
     OP_ADD,
     OP_SUBTRACT,
     OP_MULTIPLY,
     OP_DIVIDE,
+    OP_NOT,
     OP_NEGATE,
     OP_RETURN,
 } OpCode; // Operation Code
@@ -21,7 +28,7 @@ typedef struct
     int capacity;
     uint8_t *code; // Array of bytecode
     ValueArray constants;
-    int *lines;
+    int *lines; // Array of code line number
 } Chunk;
 
 void initChunk(Chunk *chunk);

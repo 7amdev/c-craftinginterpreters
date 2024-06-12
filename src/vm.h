@@ -12,6 +12,7 @@ typedef struct
     uint8_t *ip;  // (i)nstruction (p)ointer
     Value stack[STACK_MAX];
     Value *stackTop;
+    Obj *objects; // A pointer to the head of the object linked-list
 } VM;
 
 typedef enum
@@ -21,6 +22,8 @@ typedef enum
     INTERPRET_RUNTIME_ERROR,
     INTERPRET_ERROR
 } InterpretResult;
+
+extern VM vm;
 
 void initVM();
 void freeVM();
