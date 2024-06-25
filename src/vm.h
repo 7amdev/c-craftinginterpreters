@@ -13,6 +13,7 @@ typedef struct
     uint8_t *ip;  // (i)nstruction (p)ointer
     Value stack[STACK_MAX];
     Value *stackTop;
+    Table globals;
     Table strings;
     Obj *objects; // A pointer to the head of the object linked-list
 } VM;
