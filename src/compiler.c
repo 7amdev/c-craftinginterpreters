@@ -72,6 +72,7 @@ static bool check(TokenType type);
 static void emitByte(uint8_t byte);
 static int emitJump(uint8_t instruction);
 static void emitBytes(uint8_t byte1, uint8_t byte2);
+static void emitLoop(int loopStart);
 static void emitReturn();
 static void patchJump(int offset);
 static void emitConstant(Value value);
@@ -87,6 +88,8 @@ static void grouping(bool canAssign);
 static void unary(bool canAssign);
 static void binary(bool canAssign);
 static void literal(bool canAssign);
+static void and_(bool canAssign);
+static void or_(bool canAssign);
 static void parsePrecedence(Precedence precedence);
 static uint8_t identifierConstant(Token *name);
 static bool identifiersEqual(Token *a, Token *b);
@@ -126,7 +129,7 @@ ParseRule rules[] = {
     [TOKEN_IDENTIFIER] = {variable, NULL, PREC_NONE},
     [TOKEN_STRING] = {string, NULL, PREC_NONE},
     [TOKEN_NUMBER] = {number, NULL, PREC_NONE},
-    [TOKEN_AND] = {NULL, NULL, PREC_NONE},
+    [TOKEN_AND] = {NULL, and_, PREC_AND},
     [TOKEN_CLASS] = {NULL, NULL, PREC_NONE},
     [TOKEN_ELSE] = {NULL, NULL, PREC_NONE},
     [TOKEN_FALSE] = {literal, NULL, PREC_NONE},
@@ -134,7 +137,7 @@ ParseRule rules[] = {
     [TOKEN_FUN] = {NULL, NULL, PREC_NONE},
     [TOKEN_IF] = {NULL, NULL, PREC_NONE},
     [TOKEN_NIL] = {literal, NULL, PREC_NONE},
-    [TOKEN_OR] = {NULL, NULL, PREC_NONE},
+    [TOKEN_OR] = {NULL, or_, PREC_OR},
     [TOKEN_PRINT] = {NULL, NULL, PREC_NONE},
     [TOKEN_RETURN] = {NULL, NULL, PREC_NONE},
     [TOKEN_SUPER] = {NULL, NULL, PREC_NONE},
@@ -222,16 +225,41 @@ static void printStatement()
     emitByte(OP_PRINT);
 }
 
+static void whileStatement()
+{
+    int loopStart = currentChunk()->count;
+    consume(TOKEN_LEFT_PAREN, "Expect '(' after 'while'.");
+    expression();
+    consume(TOKEN_RIGHT_PAREN, "Expect ')' after condition.");
+
+    int exitJump = emitJump(OP_JUMP_IF_FALSE);
+    emitByte(OP_POP);
+    statement();
+    emitLoop(loopStart);
+
+    patchJump(exitJump);
+    emitByte(OP_POP);
+}
+
 static void ifStatement()
 {
     consume(TOKEN_LEFT_PAREN, "Expect '(' after 'if'.");
     expression();
     consume(TOKEN_RIGHT_PAREN, "Expect ')' after condition.");
 
-    int thenJump = emitJump(OP_JUMP_IF_FALSE);
+    int jumpOverThenClause = emitJump(OP_JUMP_IF_FALSE);
+    emitByte(OP_POP);
     statement();
 
-    patchJump(thenJump);
+    int jumpOverElseClause = emitJump(OP_JUMP);
+
+    patchJump(jumpOverThenClause);
+    emitByte(OP_POP);
+
+    if (match(TOKEN_ELSE))
+        statement();
+
+    patchJump(jumpOverElseClause);
 }
 
 static void synchronize()
@@ -285,6 +313,10 @@ static void statement()
     else if (match(TOKEN_IF))
     {
         ifStatement();
+    }
+    else if (match(TOKEN_WHILE))
+    {
+        whileStatement();
     }
     else if (match(TOKEN_LEFT_BRACE))
     {
@@ -446,6 +478,17 @@ static void emitBytes(uint8_t byte1, uint8_t byte2)
 {
     emitByte(byte1);
     emitByte(byte2);
+}
+
+static void emitLoop(int loopStart)
+{
+    emitByte(OP_LOOP);
+    int offset = currentChunk()->count - loopStart + 2;
+    if (offset > UINT16_MAX)
+        error("Loop body too large.");
+
+    emitByte((offset >> 8) & 0xff);
+    emitByte(offset & 0xff);
 }
 
 static int emitJump(uint8_t instruction)
@@ -665,6 +708,28 @@ static void literal(bool canAssign)
     default:
         return; // unreachable
     }
+}
+
+static void and_(bool canAssign)
+{
+    int endJump = emitJump(OP_JUMP_IF_FALSE);
+
+    emitByte(OP_POP);
+    parsePrecedence(PREC_AND);
+
+    patchJump(endJump);
+}
+
+static void or_(bool canAssign)
+{
+    int elseJump = emitJump(OP_JUMP_IF_FALSE);
+    int endJump = emitJump(OP_JUMP);
+
+    patchJump(elseJump);
+    emitByte(OP_POP);
+
+    parsePrecedence(PREC_OR);
+    patchJump(endJump);
 }
 
 static ParseRule *getRule(TokenType type)
