@@ -55,8 +55,9 @@ typedef enum
     TYPE_SCRIPT
 } FunctionType;
 
-typedef struct
+typedef struct Compiler
 {
+    struct Compiler *enclosing;
     ObjFunction *function;
     FunctionType type;
 
@@ -160,12 +161,17 @@ ParseRule rules[] = {
 
 static void initCompiler(Compiler *compiler, FunctionType type)
 {
+    compiler->enclosing = compiler_current;
     compiler->function = NULL; // Garbage collection-related paranoia :).
     compiler->type = type;
     compiler->localCount = 0;
     compiler->scopeDepth = 0;
     compiler->function = newFunction();
     compiler_current = compiler;
+    if (type != TYPE_SCRIPT)
+    {
+        compiler_current->function->name = copyString(parser.previous.start, parser.previous.length);
+    }
 
     // Create/Make/Allocate/New Local.
     Local *local = &compiler_current->locals[compiler_current->localCount++];
@@ -209,6 +215,42 @@ static void block()
     }
 
     consume(TOKEN_RIGHT_BRACE, "Epect '}' after block.");
+}
+
+static void function(FunctionType type)
+{
+    Compiler compiler;
+    initCompiler(&compiler, type);
+    beginScope();
+
+    consume(TOKEN_LEFT_PAREN, "Expect '(' after function name.");
+    if (!check(TOKEN_RIGHT_PAREN))
+    {
+        do
+        {
+            compiler_current->function->arity++;
+            if (compiler_current->function->arity > 255)
+            {
+                errorAtCurrent("Can't have more than 255 parameters.");
+            }
+            uint8_t constant = parseVariable("Expect parameter name.");
+            defineVariable(constant);
+        } while (match(TOKEN_COMMA));
+    }
+    consume(TOKEN_RIGHT_PAREN, "Expect ')' after parameters.");
+    consume(TOKEN_LEFT_BRACE, "Expect '{' before function body.");
+    block();
+
+    ObjFunction *function = endCompiler();
+    emitBytes(OP_CONSTANT, makeConstant(OBJ_VAL(function)));
+}
+
+static void funDeclaration()
+{
+    uint8_t global = parseVariable("Expect function name.");
+    markInitialized();
+    function(TYPE_FUNCTION);
+    defineVariable(global);
 }
 
 static void varDeclaration()
@@ -364,7 +406,11 @@ static void synchronize()
 
 static void declaration()
 {
-    if (match(TOKEN_VAR))
+    if (match(TOKEN_FUN))
+    {
+        funDeclaration();
+    }
+    else if (match(TOKEN_VAR))
     {
         varDeclaration();
     }
@@ -494,6 +540,9 @@ static uint8_t parseVariable(const char *errorMessage)
 
 static void markInitialized()
 {
+    if (compiler_current->scopeDepth == 0)
+        return;
+
     compiler_current->locals[compiler_current->localCount - 1].depth = compiler_current->scopeDepth;
 }
 
@@ -619,6 +668,7 @@ static ObjFunction *endCompiler()
     }
 #endif
 
+    compiler_current = compiler_current->enclosing;
     return function;
 }
 
