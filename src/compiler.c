@@ -57,7 +57,7 @@ typedef enum
 
 typedef struct Compiler
 {
-    struct Compiler *enclosing;
+    struct Compiler *enclosing; // Save the previous Compiler to return to
     ObjFunction *function;
     FunctionType type;
 
