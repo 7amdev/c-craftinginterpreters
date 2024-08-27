@@ -18,8 +18,8 @@ int main(int argc, const char *argv[])
 
     if (argc == 1)
     {
-        LOG_TRACE("You're in repl mode...");
-        LOG_ASSERT(false, "Assertion is false!");
+        // LOG_TRACE("You're in repl mode...");
+        // LOG_ASSERT(false, "Assertion is false!");
         repl();
     }
     else if (argc == 2)
