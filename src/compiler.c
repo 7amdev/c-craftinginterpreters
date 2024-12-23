@@ -67,8 +67,10 @@ typedef struct Compiler
     ObjFunction *function;
     FunctionType type;
 
+    // Local_Stack to simulate runtime Value_Stack
     Local locals[UINT8_COUNT];
     int localCount;
+
     Upvalue upvalues[UINT8_COUNT];
     int scopeDepth;
 } Compiler;

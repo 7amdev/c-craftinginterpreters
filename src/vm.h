@@ -24,6 +24,7 @@ typedef struct
 
     Value stack[STACK_MAX]; // Value Stack
     Value *stackTop;
+
     Table globals;
     Table strings;
     Obj *objects; // A pointer to the head of the object linked-list

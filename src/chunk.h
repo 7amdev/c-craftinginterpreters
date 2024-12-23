@@ -41,8 +41,9 @@ typedef struct
     int count;
     int capacity;
     uint8_t *code; // Array of bytecode
+    int *lines;    // Array of code line number
+
     ValueArray constants;
-    int *lines; // Array of code line number
 } Chunk;
 
 void initChunk(Chunk *chunk);
