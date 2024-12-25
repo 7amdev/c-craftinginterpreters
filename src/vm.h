@@ -27,6 +27,7 @@ typedef struct
 
     Table globals;
     Table strings;
+    ObjUpvalue *openUpvalues;
     Obj *objects; // A pointer to the head of the object linked-list
 } VM;
 
