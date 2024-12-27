@@ -28,7 +28,13 @@ typedef struct
     Table globals;
     Table strings;
     ObjUpvalue *openUpvalues;
-    Obj *objects; // A pointer to the head of the object linked-list
+
+    size_t bytesAllocated; // Running total o fthe number of bytes of managed memmory
+    size_t nextGC;         // Treshold that triggers the next garbage collection
+    Obj *objects;          // A pointer to the head of the object linked-list
+    int grayCount;
+    int grayCapacity;
+    Obj **grayStack;
 } VM;
 
 typedef enum
