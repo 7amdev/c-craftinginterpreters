@@ -27,6 +27,7 @@ typedef struct
 
     Table globals;
     Table strings;
+    ObjString *initString;
     ObjUpvalue *openUpvalues;
 
     size_t bytesAllocated; // Running total o fthe number of bytes of managed memmory
